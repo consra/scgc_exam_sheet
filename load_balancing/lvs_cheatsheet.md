@@ -1,9 +1,9 @@
-# Linux Virtual Server (LVS)
+# Linux Virtual Server (LVS)  
 
-RS: Real Servers
-VS: Virtual Servers (directors)
-DR: Direct Routing
-TUN: Tunneling
+RS: Real Servers  
+VS: Virtual Servers (directors)  
+DR: Direct Routing  
+TUN: Tunneling  
 
 ```bash
 

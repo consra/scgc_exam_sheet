@@ -1,4 +1,4 @@
-# Container virtualization cheatsheet
+# LXC cheatsheet
 
 ```bash
 # Check if the kernel supports LXC.

@@ -1,0 +1,43 @@
+;
+; BIND data file for local loopback interface
+;
+$TTL	604800
+@	IN	SOA	x-men.local. root.x-men.local. (
+			      3		; Serial
+			 604800		; Refresh
+			  86400		; Retry
+			2419200		; Expire
+			 604800 )	; Negative Cache TTL
+; name severs - NS records
+	IN	NS	ns1.x-men.local.
+	IN	NS	ns2.x-men.local.
+	IN	NS	ns3.x-men.local.
+	IN	NS	ns4.x-men.local.
+
+; name servers - MX records
+	IN	MX	20	mx-o6Iv.x-men.local.
+	IN	MX	20	mx-7kJzx.x-men.local.
+	IN	MX	10	mx-rGw.x-men.local.
+	IN	MX	10	mx-5AXfd.x-men.local.
+	IN	MX	30	mx-ZRI0.x-men.local.
+
+; name servers - CNAME records
+cname-O54.x-men.local.		IN	CNAME	mx-7kJzx.x-men.local.
+cname-ml.x-men.local.		IN	CNAME	sub-8jk7S.x-men.local.
+cname-h4U.x-men.local.		IN	CNAME	sub-8jk7S.x-men.local.
+cname-EXHwt.x-men.local.	IN	CNAME	mx-5AXfd.x-men.local.
+
+; name servers - A records
+ns1.x-men.local.	IN	A	192.168.28.121
+ns2.x-men.local.	IN	A	10.2.184.127
+ns3.x-men.local.	IN	A	172.23.165.148
+ns4.x-men.local.	IN	A	172.17.177.76
+sub-0m.x-men.local.	IN	A	192.168.149.251
+sub-8jk7S.x-men.local.	IN	A	10.220.164.60
+sub-qVUQQ.x-men.local.	IN	A	10.174.239.136
+mx-o6Iv.x-men.local.	IN	A	10.216.151.171
+mx-7kJzx.x-men.local.	IN	A	10.246.57.181
+mx-rGw.x-men.local.	IN	A	10.129.173.137
+mx-5AXfd.x-men.local.	IN	A	10.32.55.57
+mx-ZRI0.x-men.local.	IN	A	192.168.132.175
+

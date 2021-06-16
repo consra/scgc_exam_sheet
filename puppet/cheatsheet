@@ -1,0 +1,29 @@
+1: Creating / removing resources:
+###############
+# Va crea un user: :D
+puppet resource user gigel ensure=present shell="/bin/sh" home="/home/gigel"
+###############
+
+2: Apply manifest:
+###############
+puppet apply my_file_manif.pp
+###############
+
+3: Puppet server:
+###############
+yum install puppetserver
+OR
+apt-get install puppetserver
+
+sudo systemctl start puppetserver
+puppetserver -v # Check the pupper server is istalled ok
+###############
+
+4: Puppet 007 (adica puppet agent, broah..)
+###############
+sudo yum install puppet-agent
+OR
+sudo apt-get install puppet-agent
+
+sudo /opt/puppetlabs/bin/puppet resource service puppet ensure=running enable=true
+###############

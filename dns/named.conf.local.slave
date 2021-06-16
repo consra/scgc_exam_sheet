@@ -1,0 +1,7 @@
+// Check file with named-checkconf named.conf.local
+
+zone "gryffindor.hp.com." {
+    type slave;
+    file "/var/named/slaves/db.gryffindor.hp.com"; // the zone file
+    masters { 192.168.1.1; }; // replace with the master VM IP address
+};

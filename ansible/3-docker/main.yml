@@ -1,0 +1,112 @@
+---
+- name: docker creator
+  hosts: docker
+  tasks:
+          - name: create group for user
+            become: yes
+            group:
+                    name: deployer-BhzdZ
+
+          - name: create docker group
+            become: yes
+            group:
+                    name: docker
+
+          - name: create user
+            become: yes
+            user:
+                    name: deployer-jWxcy
+                    group: deployer-BhzdZ
+                    groups: docker
+                    append: yes
+                    create_home: yes
+
+          - name: authorize ssh key
+            become: yes
+            when: not ansible_check_mode
+            ansible.posix.authorized_key:
+                    user: deployer-jWxcy
+                    key: "{{ lookup('file', '/home/student/.ssh/id_docker.pub') }}"
+
+          - name: create working directory
+            become: yes
+            file:
+                    path: /home/deployer-jWxcy/webapp-jk3u/
+                    state: directory
+                    owner: deployer-jWxcy
+                    mode: 0700
+
+          - name: copy dockerfile
+            become: yes
+            copy:
+                    src: ./Dockerfile
+                    dest: /home/deployer-jWxcy/webapp-jk3u/Dockerfile
+                    owner: deployer-jWxcy
+                    force: yes
+                    mode: 0600
+
+          - name: copy dockerignore
+            become: yes
+            copy:
+                    src: ./.dockerignore
+                    dest: /home/deployer-jWxcy/webapp-jk3u/.dockerignore
+                    owner: deployer-jWxcy
+                    force: yes
+                    mode: 0600
+
+          - name: copy app directory
+            become: yes
+            copy:
+                    force: yes
+                    src: ./app
+                    dest: /home/deployer-jWxcy/webapp-jk3u/
+                    owner: deployer-jWxcy
+                    mode: 0600
+                    directory_mode: 0700
+
+          - name: install docker sdk for python
+            become: yes
+            when: not ansible_check_mode
+            apt:
+                    pkg:
+                            - python-pip
+                            - python-setuptools
+                            - python-docker
+
+          - name: build docker image
+            become: yes
+            community.docker.docker_image:
+                    name: scgc-task/webapp-up27l3
+                    tag: v1
+                    source: build
+                    build:
+                            path: /home/deployer-jWxcy/webapp-jk3u/
+                    force_source: yes
+
+          - name: create docker network
+            become: yes
+            community.docker.docker_network:
+                    name: WebAppNet-1jLQ
+                    ipam_config:
+                            - subnet: 172.20.235.0/24
+
+          - name: start docker container
+            become: yes
+            become_user:  deployer-jWxcy
+            become_method: sudo
+            community.docker.docker_container:
+                    name: scgc_webapp_2S4JB
+                    state: started
+                    image: scgc-task/webapp-up27l3:v1
+                    hostname: scgc_webapp_2S4JB
+                    user: node
+                    network_mode: WebAppNet-1jLQ
+                    networks:
+                            - name: WebAppNet-1jLQ
+                              ipv4_address: "172.20.235.72"
+                    ports:
+                            - "8422:8422"
+                    restart: yes
+                    restart_policy: unless-stopped
+                    container_default_behavior: no_defaults
+

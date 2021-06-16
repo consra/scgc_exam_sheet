@@ -1,0 +1,38 @@
+---
+- name: load balancer
+  hosts: loadbalancer
+  tasks:
+    - name: install latest version of nginx
+      apt:
+        name: nginx
+        state: latest
+      become: yes
+    - name: start nginx
+      service:
+        name: nginx
+        state: started
+      become: yes
+    - name: update nginx.conf
+      copy:
+        src: ./nginx.conf
+        dest: /etc/nginx/nginx.conf
+        force: yes
+      become: yes
+    - name: update certificate
+      copy:
+        src: ./nginx.crt
+        dest: /etc/ssl/nginx.crt
+        force: yes
+      become: yes
+    - name: update key
+      copy:
+        src: ./nginx.key
+        dest: /etc/ssl/nginx.key
+        force: yes
+      become: yes
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+      become: yes
+

@@ -1,0 +1,68 @@
+1: Inspect a certificate:
+###############
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -text
+
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -pubkey
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -startdate
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -enddate
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -dates
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -issuer
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -subject
+openssl x509 -in houdini.cs.pub.ro.crt-roedunet -noout -modulus
+
+# Verify a certificate chain:
+openssl verify -CAfile terena-ca-chain.pem houdini.cs.pub.ro.crt-roedunet
+
+# Mai multe certificate in acelasi file:
+openssl crl2pkcs7 -nocrl -certfile terena-ca-chain.pem | openssl pkcs7 -print_certs -noout
+###############
+
+2: Remote Inspecting a Certificate:
+###############
+echo | openssl s_client -connect aero.curs.pub.ro:443
+
+echo | openssl s_client -connect aero.curs.pub.ro:443 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | openssl x509 -noout -text
+###############
+
+3: Generare de Certificate:
+###############
+# Generam o cheie privata
+openssl genrsa -out server.scgc.key 2048
+
+# Generam signing request
+openssl req -new -key server.scgc.key -out server.scgc.csr
+
+# Semnarea signing requestului
+openssl ca -config scgc-ca.cnf -policy signing_policy -extensions signing_req -in server.scgc.csr -out server.scgc.crt
+
+# Verificam ca certificatul semnat se potriveste cu cheia generata
+openssl x509 -in server.scgc.crt -noout -modulus | md5sum
+openssl rsa -in server.scgc.key -noout -modulus | md5sum
+
+# Verificare in plus:
+openssl verify -CAfile scgc-ca/scgc-ca.crt server.scgc.crt
+
+# Bug certificat expirat:
+openssl req -new -key scgc-ca/scgc-ca.key -out scgc-ca/scgc-ca.csr
+openssl x509 -req -in scgc-ca/scgc-ca.csr -signkey scgc-ca/scgc-ca.key -out scgc-ca/scgc-ca.crt
+###############
+
+4. Comunicare client-server necriptata:
+###############
+# In alt terminal
+sudo tcpdump -A -i lo port 12345
+
+# Launch server
+nc -l 12345
+
+# Connect to Server
+nc localhost 12345
+###############
+
+5. Comunicare criptata:
+###############
+# Server:
+openssl s_server -key server.scgc.key -cert server.scgc.crt -accept 12345
+# Client:
+openssl s_client -CAfile scgc-ca/scgc-ca.crt -connect localhost:12345
+###############

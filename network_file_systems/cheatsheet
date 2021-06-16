@@ -1,0 +1,93 @@
+1: Install good stuff:
+###############
+apt-get update
+apt-get install mdadm
+###############
+
+2: Create RAID0:
+###############
+mdadm --create /dev/md0 --level=0 --raid-devices=3 /dev/sdb1 /dev/sdc1 /dev/sdd1
+cat /proc/mdstat
+###############
+
+3: View details about RAID0:
+###############
+mdadm --detail /dev/md0
+###############
+
+4: Inchidere RAID:
+###############
+mdadm --stop /dev/md0
+###############
+
+5: Zeroizare superblocuri (cred ca e necesara casa poti sa scoti blocuri din RAID):
+###############
+mdadm --zero-superblock /dev/sdb1
+###############
+
+6: Scoatere blocuri din RAID:
+###############
+mdadm /dev/md0 --fail /dev/sdd1 # Marcare ca fail
+mdadm /dev/md0 --remove /dev/sdd1 # Eliminare
+###############
+
+7: Adaugarea unui disk la RAID:
+###############
+mdadm /dev/md1 --add /dev/sdb2
+###############
+
+8: Fa configuratia persistenta:
+###############
+mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+update-initramfs -u
+reboot # Ca sa arati ca a ramas
+###############
+
+9: XFS
+###############
+apt install xfsprogs
+fdisk /dev/md1
+# n
+# p
+# enter toate
+# w
+
+# Montare:
+mkfs.xfs -i size=512 -f /dev/md1
+mkdir /export
+echo "/dev/md1 /export xfs defaults 1 2" >> /etc/fstab
+mount /export
+
+# Proof:
+df -h | grep export
+###############
+
+10: GlusterFS:
+###############
+# Install and prepare:
+apt install glusterfs-server
+systemctl enable --now glusterd
+
+# Seteaza hosturile in /etc/hosts
+gluster peer probe storage2
+
+# Creare volum cu partitii de pe ambele masini:
+gluster volume create scgc transport tcp storage1:/export/brick1 storage2:/export/brick1
+
+# Proof:
+gluster volume info
+
+# Permisiuni:
+gluster volume set scgc auth.allow 192.168.1.*
+gluster volume start scgc
+
+# Montare:
+apt install glusterfs-client
+mkdir /export
+mount -t glusterfs storage1:/scgc /export
+df -h | grep export
+###############
+
+
+# Data replication:
+sudo gluster volume create volume_name replica number_of_servers domain1.com:/path/to/data/directory domain2.com:/path/to/data/directory force

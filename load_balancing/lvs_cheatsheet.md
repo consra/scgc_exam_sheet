@@ -1,7 +1,7 @@
 # Linux Virtual Server (LVS)  
 
-RS: Real Servers  
-VS: Virtual Servers (directors)  
+RS: Real Server  
+VS: Virtual Server (director)  
 DR: Direct Routing  
 TUN: Tunneling  
 
@@ -60,9 +60,11 @@ ipvsadm -l -c
 # Delete the service on vm1, which is the VS.
 ipvsadm -D -t 10.0.0.1:80
 
+#########################################################################################################
 # Delete the iptables rules from vm2 and vm3 which are the RSs.
 iptables -t nat -F
 iptables -t nat -F
+#########################################################################################################
 
 ```
 

@@ -1,0 +1,172 @@
+1: Setup:
+###############
+cat /proc/cpuinfo | grep vmx # Pe intel sau svm (pe AMD) si daca gasim inseamna ca avem suport
+
+sudo apt-get install qemu-kvm
+lsmod | grep kvm # Verificam ca KVM kernel module e incarcat
+ls -l /dev/kvm # Se face un char device de comunicare prin ioctl
+
+USE root USER
+
+# Creare VM de 256MB Ram si cu 2 procesoare:
+kvm -hda base.qcow2 -m 256 -smp 2
+
+
+# Check:
+ps -eLf | grep kvm # Avem si management threads: de aia apar mai multe decat nr de procesoare
+###############
+
+2: Conectare prin VNC la VM:
+###############
+# Folosim optiunea -vnc ca sa ne putem conecta cu VNC :P
+# Folosim optiunea -daemonize ca sa fie in background
+kvm -hda base.qcow2 -m 512 -smp 4 -vnc :1 –daemonize
+
+# Conectare la masina:
+vncviewer localhost:5901
+###############
+
+3: Copy-on-write Virtual Storage: (Creare disk virtual + instalare OS pe el)
+###############
+instalam: qemu-utils
+qemu-img create -f qcow2 virtualdisk.qcow2 2G
+
+# Instalare imagine pe disk:
+kvm -hda virtualdisk.qcow2 -cdrom debian-10.3.0-amd64-netinst.iso -m 256 -smp 2
+###############
+
+4: Adaugare resurse la KVM:
+###############
+# Listare VM-uri:
+virsh list
+
+# Adaugare Disk la masina:
+virsh attach-disk TestCentos6 /opt/iso/disk2.img sdb
+
+# Pe VM verificam ca s-a adaugat diskul:
+lsblk
+
+# Scoatem Disk:
+virsh detach-disk TestCentos6 sdb
+###############
+
+5: Creare imagine din imagine de baza read-only (Copy-on-write):
+###############
+qemu-img create -f qcow2 -b base.qcow2 sda-vm1.qcow2
+ls -lh sda-vm1.qcow2
+###############
+
+6: Convertire format imagine:
+###############
+qemu-img convert -O vdi base.qcow2 base.vdi
+
+# CHECK:
+qemu-img info base.qcow2
+###############
+
+7: Retea/Network
+###############
+# Creare masina conectata la retea:
+kvm -hda sda-vm1.qcow2 -m 256 -smp 2 -net nic,model=e1000,macaddr=00:11:22:33:44:55 -net tap,ifname=tap-vm1 -vnc :1 -daemonize
+kvm -hda sda-vm2.qcow2 -m 256 -smp 2 -net nic,model=e1000,macaddr=AA:11:22:33:44:55 -net tap,ifname=tap-vm2 -vnc :2 -daemonize
+# Schimbare hostname VM:
+hostname vm1 # pe VM
+
+# Conectare
+# De pe masina "fizica":
+brctl addbr br0
+ip link set dev br0 up
+brctl addif br0 tap-vm1
+brctl addif br0 tap-vm2
+brctl show br0
+
+# De pe VM:
+
+ifconfig <interfata> <ipv4> netmask <masca> up
+route add default gw 192.168.1.1 (sistemul fizic va fi "routerul")
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+
+
+192.168.1.1/24 pe br0
+192.168.1.2/24 pe vm1
+192.168.1.3/24 pe vm2
+
+# Host routing:
+echo 1 > /proc/sys/net/ipv4/ip_forward
+iptables -t nat -A POSTROUTING -o <interfata_conectata_in_exterior> -j MASQUERADE
+
+# Conectare
+# De pe masina "fizica":
+brctl addbr br0
+ip link set dev br0 up
+brctl addif br0 tap-vm1
+brctl addif br0 tap-vm2
+brctl show br0
+
+# Eliminare bridge:
+brctl delif br0 tap-vm1
+brctl delif br0 tap-vm2
+ip link set dev br0 down
+brctl delbr br0
+###############
+
+8. Exporting QEMU (bun pentru debug)
+###############
+# Parametru: -monitor telnet:127.0.0.1:4445,server,nowait
+kvm -hda sda-vm2.qcow2 -m 256 -smp 2 -net nic,model=e1000,macaddr=AA:11:22:33:44:55 -net tap,ifname=tap-vm2 -vnc :2 -daemonize -monitor telnet:127.0.0.1:4445,server,nowait
+
+# Deschide QEMU Console:
+telnet localhost 4445
+
+# In QEMU:
+info registers
+info network
+info block
+info cpus
+###############
+
+9. Virsh KVM management:
+###############
+libvirt library dependencies:
+libvirt-bin
+virtinst
+virt-viewer
+virt-top
+
+usermod -a -G libvirtd <user>
+
+
+virsh -c qemu:///system net-start default
+# Create KVM Guest:
+virt-install --connect qemu:///system --name VM1 --hvm --ram 256 --disk path=base.qcow2,format=qcow2 --network network=default --vnc --import
+
+# Parametri:
+# ''--connect qemu:///system''  - connect to the local system
+# ''--name VM1'' - name of the virtual machine to be created
+# ''--hvm'' - use the hardware virtualization support (otherwise the VM will be emulated entirely by QEMU)
+# ''--ram 256'' - size of RAM
+# ''--disk path=base.qcow2,format=qcow2'' - virtual disk name and its format
+# ''--network network=default'' - add a network interface with default properties
+# ''--vnc'' - export the VNC console
+# ''--import'' - use the ''base.qcow2'' image and do not create a new one based on it
+virsh # Lanseaza consola
+# In consola de virsh:
+list # Sa vezi masinile
+vncdisplay <id_vm> # iti zice unde sa te conectezi cu vnc
+
+# In alt terminal:
+vncviewer <ce ti-a scuipat comanda de dinainte>
+
+# Inchidere guest din virsh console:
+shutdown <id_vm>
+list --all # Iti arata si guest-urile inchise
+
+start VM1 # Pornesti, aici ii dai numele, pentru ca inca nu are ID, fiind inchis
+
+# Stergere VM din virsh:
+destroy 4 # O inchide
+undefine VM1
+
+# Check:
+list --all
+###############

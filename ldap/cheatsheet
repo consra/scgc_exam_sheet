@@ -1,0 +1,116 @@
+1: Setup:
+###############
+/etc/hosts:
+10.9.x.y  server.scgc.ro # IP and name of the server
+
+/etc/sysctl.conf:
+net.ipv4.tcp_keepalive_time = 300
+net.ipv4.ip_local_port_range = 1024 65000
+fs.file-max = 64000
+
+
+sysctl -p
+
+
+# Allow up to 8192 processes to use 389-ds: Relogin to take place
+/etc/security/limits.conf:
+*               soft     nofile          8192
+*               hard     nofile          8192
+
+
+/etc/pam.d/login:
+session    required     /lib/security/pam_limits.so
+
+
+useradd ldapadmin
+passwd ldapadmin
+
+
+yum install epel-release
+yum install 389-ds
+###############
+
+2: 389-ds setup:
+###############
+setup-ds-admin.pl
+# yes
+# yes
+# 2   # Typical
+# nume_server: ex: server.scgc.ro
+# ldapadmin
+# ldapadmin
+# no (enter)
+# admin
+# pass
+# pass
+# scgc.ro (enter) (root of dir tree: ai grija la task)
+# enter
+# enter
+# enter (aici e root of directory tree: ai grija la task)
+# enter
+# pass
+# pass
+# enter
+# yes (enter)
+
+# Start on reboot:
+systemctl enable dirsrv.target
+systemctl enable dirsrv-admin
+###############
+
+3: LDAP check:
+###############
+ldapsearch -x -b "dc=scgc,dc=ro" # Sau ce nume ai pus
+
+# Pornire GUI: 389-console:
+389-console -a http://server.scgc.ro:9830
+
+Login:
+admin + pass din setup
+############### 
+
+4: Config Linux for LDAP:
+###############
+authconfig --enableldap --enableldapauth --ldapserver=ldap://server.scgc.ro:389/ --ldapbasedn="dc=scgc,dc=ro" --update
+###############
+
+5. Add Linux User (POSIX):
+###############
+Add user din interfata grafica,
+
+CHECK:
+getent passwd han
+su han
+###############
+
+6. Director Home:
+###############
+/etc/pam.d/login:
+session    required     pam_mkhomdir.so skel=/etc/skel umask=0027
+
+
+authconfig --enablemkhomedir --update
+# Acum cand te loggezi prima data iti face si director :D
+###############
+
+7. Grupuri:
+###############
+Adaugi grupul din: GUI: Groups organizational unit
+Adaugi si atribute POSIX
+###############
+
+8. Hostnames (Name resolving cu LDAP):
+###############
+/etc/nsswitch.conf:
+hosts:      files dns ldap
+
+8.1 Create a new Organizational Unit din GUI: BaseDN: Organizational UNIT
+8.2 Directory Server (din Servers and Applications tab)
+8.3 In Directory Server (Directory tab), selectam Hosts din scgc (sau cum l-am numit), Click dreapta
+8.4 New -> Other -> iphost
+8.5 Adaugam un host nou
+
+CHECK:
+getent hosts
+ping ldaphost -c 1
+###############

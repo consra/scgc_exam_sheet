@@ -7,6 +7,8 @@ TUN: Tunneling
 
 ```bash
 
+###### Configure LVS-DR. ######
+
 # These commands are issued on vm1, which is the director (Virtual Server).
 # This server is the entry point that does the actual balancing.
 
@@ -62,8 +64,57 @@ ipvsadm -D -t 10.0.0.1:80
 
 #########################################################################################################
 # Delete the iptables rules from vm2 and vm3 which are the RSs.
-iptables -t nat -F
-iptables -t nat -F
+iptables -t nat -F #vm2
+iptables -t nat -F #vm3
+
+#########################################################################################################
+
+###### Configure LVS_TUN (same as above with few differences). ######
+
+# These commands are issued on vm1, which is the director (Virtual Server).
+# This server is the entry point that does the actual balancing.
+
+# Add the 10.0.0.1/24 address on the ens3:1 subinterface.
+ip addr add dev ens3 10.0.0.1/24 label ens3:1
+
+# Configure the HTTP service as a virtual service: specify
+# the virtual server address and port and the transport
+# protocol used (TCP, in our case). The -A flag means add
+# service, -t flag means tcp service address.
+ipvsadm -A -t 10.0.0.1:80
+
+# Add the real servers. The -i flag means LVS-TUN, the -a 
+# means add server, -r real server address, -t is tcp service 
+# address.
+ipvsadm -a -t 10.0.0.1:80 -r 10.0.0.20:80 -i
+ipvsadm -a -t 10.0.0.1:80 -r 10.0.0.30:80 -i
+
+#########################################################################################################
+# These commands are issued on vm2 and vm3 which are the Real Servers. This
+# is where the requests are redirected and where they will be processed. Note: if these
+# do not work on their own, try using the iptables rules from LVS-DR.
+
+# vm2
+ip tunnel add tun0 mode ipip local 10.0.0.20
+ip addr add 10.0.0.1/24 dev tun0
+ip link set tun0 up
+
+# vm3
+ip tunnel add tun0 mode ipip local 10.0.0.30
+ip addr add 10.0.0.1/24 dev tun0
+ip link set tun0 up
+
+#########################################################################################################
+
+#### Commands for removal.
+
+# Delete the service on vm1, which is the VS.
+ipvsadm -D -t 10.0.0.1:80
+
+#########################################################################################################
+# Delete the iptables rules from vm2 and vm3 which are the RSs.
+ip tunnel del tun0 #vm2
+ip tunnel del tun0 #vm3
 #########################################################################################################
 
 ```

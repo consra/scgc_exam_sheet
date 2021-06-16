@@ -1,7 +1,13 @@
+// Use this access list to allow recursive queries.
+// acl allowed_ips_for_recursive_queries { 10.9.107.151; 127.0.0.1; };
+
 options {
         directory "/var/cache/bind";
         
         listen-on { 192.168.1.1; localhost; };
+        
+        allow-recursion { allowed_ips_for_recursive_queries; };
+        recursion yes;
 
         // If there is a firewall between you and nameservers you want
         // to talk to, you may need to fix the firewall to allow multiple

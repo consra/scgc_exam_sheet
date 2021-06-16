@@ -16,4 +16,4 @@ For Debian-based distributions, bind will have the following configuration files
 /etc/bind/db.domain.ro  
 
 **Default zone file location**:    
-/var/cache/bind/. 
+/var/cache/bind/  
